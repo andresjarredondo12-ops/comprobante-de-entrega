@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>App Remitos PDF Final</title>
+<title>App Remitos PRO FINAL</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -15,7 +15,8 @@ canvas { border:1px solid black; width:100%; height:200px; touch-action:none; }
 .hidden { display:none; }
 
 table { width:100%; margin-top:20px; border-collapse:collapse; }
-th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
+th, td { border:1px solid #ccc; padding:6px; font-size:12px; text-align:center; }
+button.small { width:auto; padding:5px; font-size:11px; }
 </style>
 </head>
 
@@ -40,32 +41,33 @@ th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
     <button onclick="limpiarFirma()">Limpiar Firma</button>
 
     <button onclick="guardarRemito()">Guardar Remito</button>
+    <button onclick="exportarUltimo()">Exportar último remito</button>
 
     <h3>Registros</h3>
     <table>
         <thead>
             <tr>
-                <th>Usuario</th>
                 <th>Cliente</th>
                 <th>Monto</th>
                 <th>Fecha</th>
+                <th>Acción</th>
             </tr>
         </thead>
         <tbody id="tablaRemitos"></tbody>
     </table>
 
-    <button onclick="exportarPDF()">Exportar PDF del día</button>
+    <button onclick="exportarTodos()">Exportar todos (PDF)</button>
     <button onclick="limpiarTodo()">Cerrar día</button>
 </div>
 
 <script>
-let usuario = "";
+let usuario="";
 
 // LOGIN
 function login(){
-    usuario = username.value;
+    usuario=username.value;
     if(!usuario) return alert("Ingrese usuario");
-    localStorage.setItem("usuario", usuario);
+    localStorage.setItem("usuario",usuario);
 
     loginDiv.classList.add("hidden");
     appDiv.classList.remove("hidden");
@@ -75,13 +77,13 @@ function login(){
 
 // FECHA
 function actualizarFechaHora(){
-    fechaHora.innerText = new Date().toLocaleString();
+    fechaHora.innerText=new Date().toLocaleString();
 }
 setInterval(actualizarFechaHora,1000);
 
 // FIRMA
-const canvas = document.getElementById("firmaCanvas");
-const ctx = canvas.getContext("2d");
+const canvas=document.getElementById("firmaCanvas");
+const ctx=canvas.getContext("2d");
 let dibujando=false;
 
 function pos(e){
@@ -160,60 +162,85 @@ function cargarTabla(){
     let datos=JSON.parse(localStorage.getItem("remitos"))||[];
     tablaRemitos.innerHTML="";
 
-    datos.forEach(r=>{
+    datos.forEach((r,i)=>{
         tablaRemitos.innerHTML+=`
         <tr>
-            <td>${r.usuario}</td>
             <td>${r.nombre}</td>
-            <td>${r.monto}</td>
+            <td>$${r.monto}</td>
             <td>${r.fecha}</td>
+            <td>
+                <button class="small" onclick="exportarIndividual(${i})">PDF</button>
+            </td>
         </tr>`;
     });
 }
 
-// PDF FINAL
-function exportarPDF(){
+// PDF INDIVIDUAL
+function exportarIndividual(index){
+    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
+    let r=datos[index];
+    generarPDFIndividual(r);
+}
+
+// PDF ULTIMO
+function exportarUltimo(){
+    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
+    if(datos.length===0) return alert("Sin datos");
+    generarPDFIndividual(datos[datos.length-1]);
+}
+
+// GENERADOR INDIVIDUAL
+function generarPDFIndividual(r){
     const { jsPDF } = window.jspdf;
-    let doc = new jsPDF();
+    let doc=new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("REMlTO DE ENTREGA",20,20);
+
+    doc.setFontSize(12);
+    doc.text(`Cliente: ${r.nombre}`,20,40);
+    doc.text(`Codigo: ${r.codigo}`,20,50);
+    doc.text(`Monto: $${r.monto}`,20,60);
+    doc.text(`Fecha: ${r.fecha}`,20,70);
+    doc.text(`Usuario: ${r.usuario}`,20,80);
+
+    doc.text("Firma:",20,95);
+    doc.addImage(r.firma,"PNG",20,100,160,50);
+
+    doc.save(`remito_${r.codigo}.pdf`);
+}
+
+// PDF TODOS
+function exportarTodos(){
+    const { jsPDF } = window.jspdf;
+    let doc=new jsPDF();
 
     let datos=JSON.parse(localStorage.getItem("remitos"))||[];
     if(datos.length===0) return alert("Sin datos");
 
-    let y = 20;
+    let y=20;
 
-    doc.setFontSize(16);
-    doc.text("REMlTOS DEL DIA", 20, y);
-    y += 10;
+    doc.text("REMlTOS DEL DIA",20,y);
+    y+=10;
 
-    datos.forEach((r, i) => {
-
-        if (y > 250) {
+    datos.forEach(r=>{
+        if(y>250){
             doc.addPage();
-            y = 20;
+            y=20;
         }
 
-        doc.setFontSize(11);
-        doc.text(`Cliente: ${r.nombre}`, 20, y);
-        y += 6;
-        doc.text(`Codigo: ${r.codigo}`, 20, y);
-        y += 6;
-        doc.text(`Monto: $${r.monto}`, 20, y);
-        y += 6;
-        doc.text(`Fecha: ${r.fecha}`, 20, y);
-        y += 6;
-        doc.text(`Usuario: ${r.usuario}`, 20, y);
-        y += 6;
+        doc.text(`Cliente: ${r.nombre}`,20,y); y+=6;
+        doc.text(`Codigo: ${r.codigo}`,20,y); y+=6;
+        doc.text(`Monto: $${r.monto}`,20,y); y+=6;
+        doc.text(`Fecha: ${r.fecha}`,20,y); y+=6;
+        doc.text(`Usuario: ${r.usuario}`,20,y); y+=6;
 
-        doc.text("Firma:", 20, y);
-        y += 4;
+        doc.text("Firma:",20,y); y+=4;
+        doc.addImage(r.firma,"PNG",20,y,160,40);
+        y+=45;
 
-        // Firma grande adaptada
-        doc.addImage(r.firma, "PNG", 20, y, 160, 40);
-        y += 45;
-
-        // Separador
-        doc.line(20, y, 190, y);
-        y += 5;
+        doc.line(20,y,190,y);
+        y+=5;
     });
 
     doc.save("remitos_del_dia.pdf");
