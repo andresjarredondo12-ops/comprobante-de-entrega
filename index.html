@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>App de Remitos</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background: #f4f4f4;
+}
+
+.container {
+    max-width: 600px;
+    margin: auto;
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+}
+
+input, button {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+canvas {
+    border: 1px solid black;
+    width: 100%;
+    height: 200px;
+    touch-action: none;
+}
+
+.hidden {
+    display: none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container" id="loginDiv">
+    <h2>Login</h2>
+    <input type="text" id="username" placeholder="Nombre del usuario">
+    <button onclick="login()">Ingresar</button>
+</div>
+
+<div class="container hidden" id="appDiv">
+    <h2>Nuevo Remito</h2>
+
+    <input type="text" id="codigoCliente" placeholder="Código de Cliente">
+    <input type="text" id="nombreCliente" placeholder="Nombre y Apellido">
+    <input type="number" id="monto" placeholder="Monto recibido">
+
+    <p><strong>Fecha y Hora:</strong> <span id="fechaHora"></span></p>
+
+    <p><strong>Firma del Cliente:</strong></p>
+    <canvas id="firmaCanvas"></canvas>
+    <button onclick="limpiarFirma()">Limpiar Firma</button>
+
+    <button onclick="guardarRemito()">Guardar Remito</button>
+    <button onclick="exportarExcel()">Exportar a Excel</button>
+</div>
+
+<script>
+let usuario = "";
+
+// LOGIN
+function login() {
+    const nombre = document.getElementById("username").value;
+    if (!nombre) {
+        alert("Ingrese un nombre");
+        return;
+    }
+    usuario = nombre;
+    localStorage.setItem("usuario", usuario);
+
+    document.getElementById("loginDiv").classList.add("hidden");
+    document.getElementById("appDiv").classList.remove("hidden");
+
+    actualizarFechaHora();
+}
+
+// FECHA AUTOMÁTICA
+function actualizarFechaHora() {
+    const now = new Date();
+    document.getElementById("fechaHora").innerText = now.toLocaleString();
+}
+setInterval(actualizarFechaHora, 1000);
+
+// FIRMA (canvas táctil)
+const canvas = document.getElementById("firmaCanvas");
+const ctx = canvas.getContext("2d");
+
+let dibujando = false;
+
+function obtenerPosicion(e) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+        x: (e.touches ? e.touches[0].clientX : e.clientX) - rect.left,
+        y: (e.touches ? e.touches[0].clientY : e.clientY) - rect.top
+    };
+}
+
+function iniciarDibujo(e) {
+    dibujando = true;
+    const pos = obtenerPosicion(e);
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+function dibujar(e) {
+    if (!dibujando) return;
+    e.preventDefault();
+    const pos = obtenerPosicion(e);
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+function detenerDibujo() {
+    dibujando = false;
+}
+
+canvas.addEventListener("mousedown", iniciarDibujo);
+canvas.addEventListener("mousemove", dibujar);
+canvas.addEventListener("mouseup", detenerDibujo);
+
+canvas.addEventListener("touchstart", iniciarDibujo);
+canvas.addEventListener("touchmove", dibujar);
+canvas.addEventListener("touchend", detenerDibujo);
+
+function limpiarFirma() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// GUARDAR REMITO
+function guardarRemito() {
+    const codigo = document.getElementById("codigoCliente").value;
+    const nombre = document.getElementById("nombreCliente").value;
+    const monto = document.getElementById("monto").value;
+    const fecha = new Date().toLocaleString();
+    const firma = canvas.toDataURL();
+
+    if (!codigo || !nombre || !monto) {
+        alert("Complete todos los campos");
+        return;
+    }
+
+    const remito = {
+        usuario,
+        codigo,
+        nombre,
+        monto,
+        fecha,
+        firma
+    };
+
+    let remitos = JSON.parse(localStorage.getItem("remitos")) || [];
+    remitos.push(remito);
+    localStorage.setItem("remitos", JSON.stringify(remitos));
+
+    alert("Remito guardado");
+
+    document.getElementById("codigoCliente").value = "";
+    document.getElementById("nombreCliente").value = "";
+    document.getElementById("monto").value = "";
+    limpiarFirma();
+}
+
+// EXPORTAR A EXCEL (CSV)
+function exportarExcel() {
+    let remitos = JSON.parse(localStorage.getItem("remitos")) || [];
+
+    if (remitos.length === 0) {
+        alert("No hay datos");
+        return;
+    }
+
+    let csv = "Usuario,Codigo,Cliente,Monto,Fecha\n";
+
+    remitos.forEach(r => {
+        csv += `${r.usuario},${r.codigo},${r.nombre},${r.monto},${r.fecha}\n`;
+    });
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "remitos.csv";
+    a.click();
+}
+
+// AUTOLOGIN
+window.onload = () => {
+    const userGuardado = localStorage.getItem("usuario");
+    if (userGuardado) {
+        usuario = userGuardado;
+        document.getElementById("loginDiv").classList.add("hidden");
+        document.getElementById("appDiv").classList.remove("hidden");
+        actualizarFechaHora();
+    }
+};
+</script>
+
+</body>
+</html>
