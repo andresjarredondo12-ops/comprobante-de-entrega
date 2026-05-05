@@ -2,45 +2,18 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>App de Remitos PRO</title>
+<title>App Remitos con Firma en Excel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body {
-    font-family: Arial;
-    background: #f4f4f4;
-    margin: 20px;
-}
-.container {
-    max-width: 700px;
-    margin: auto;
-    background: white;
-    padding: 20px;
-    border-radius: 10px;
-}
-input, button {
-    width: 100%;
-    padding: 10px;
-    margin-top: 10px;
-}
-canvas {
-    border: 1px solid black;
-    width: 100%;
-    height: 200px;
-    touch-action: none;
-}
-.hidden { display: none; }
+body { font-family: Arial; background:#f4f4f4; margin:20px; }
+.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px; }
+input, button { width:100%; padding:10px; margin-top:10px; }
+canvas { border:1px solid black; width:100%; height:200px; touch-action:none; }
+.hidden { display:none; }
 
-table {
-    width: 100%;
-    margin-top: 20px;
-    border-collapse: collapse;
-}
-th, td {
-    border: 1px solid #ccc;
-    padding: 8px;
-    font-size: 12px;
-}
+table { width:100%; margin-top:20px; border-collapse:collapse; }
+th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
 </style>
 </head>
 
@@ -48,16 +21,16 @@ th, td {
 
 <div class="container" id="loginDiv">
     <h2>Login</h2>
-    <input type="text" id="username" placeholder="Nombre del usuario">
+    <input type="text" id="username" placeholder="Nombre usuario">
     <button onclick="login()">Ingresar</button>
 </div>
 
 <div class="container hidden" id="appDiv">
     <h2>Nuevo Remito</h2>
 
-    <input type="text" id="codigoCliente" placeholder="Código Cliente">
-    <input type="text" id="nombreCliente" placeholder="Nombre y Apellido">
-    <input type="number" id="monto" placeholder="Monto recibido">
+    <input id="codigoCliente" placeholder="Código Cliente">
+    <input id="nombreCliente" placeholder="Nombre y Apellido">
+    <input id="monto" type="number" placeholder="Monto">
 
     <p><strong>Fecha:</strong> <span id="fechaHora"></span></p>
 
@@ -66,7 +39,7 @@ th, td {
 
     <button onclick="guardarRemito()">Guardar Remito</button>
 
-    <h3>Registros del día</h3>
+    <h3>Registros</h3>
     <table>
         <thead>
             <tr>
@@ -79,117 +52,114 @@ th, td {
         <tbody id="tablaRemitos"></tbody>
     </table>
 
-    <button onclick="exportarExcel()">Exportar Excel</button>
-    <button onclick="enviarMail()">Enviar por Mail</button>
-    <button onclick="limpiarTodo()">Cerrar Día (Borrar registros)</button>
+    <button onclick="exportarExcel()">Exportar Excel (con firma)</button>
+    <button onclick="limpiarTodo()">Cerrar día</button>
 </div>
 
 <script>
 let usuario = "";
 
 // LOGIN
-function login() {
-    usuario = document.getElementById("username").value;
-    if (!usuario) return alert("Ingrese nombre");
-
+function login(){
+    usuario = username.value;
+    if(!usuario) return alert("Ingrese usuario");
     localStorage.setItem("usuario", usuario);
-    document.getElementById("loginDiv").classList.add("hidden");
-    document.getElementById("appDiv").classList.remove("hidden");
+
+    loginDiv.classList.add("hidden");
+    appDiv.classList.remove("hidden");
 
     cargarTabla();
 }
 
 // FECHA
-function actualizarFechaHora() {
-    document.getElementById("fechaHora").innerText =
-        new Date().toLocaleString();
+function actualizarFechaHora(){
+    fechaHora.innerText = new Date().toLocaleString();
 }
-setInterval(actualizarFechaHora, 1000);
+setInterval(actualizarFechaHora,1000);
 
 // FIRMA
 const canvas = document.getElementById("firmaCanvas");
 const ctx = canvas.getContext("2d");
-let dibujando = false;
+let dibujando=false;
 
-function pos(e) {
-    const r = canvas.getBoundingClientRect();
+function pos(e){
+    const r=canvas.getBoundingClientRect();
     return {
-        x: (e.touches ? e.touches[0].clientX : e.clientX) - r.left,
-        y: (e.touches ? e.touches[0].clientY : e.clientY) - r.top
+        x:(e.touches?e.touches[0].clientX:e.clientX)-r.left,
+        y:(e.touches?e.touches[0].clientY:e.clientY)-r.top
     };
 }
 
-canvas.addEventListener("mousedown", e => {
-    dibujando = true;
-    let p = pos(e);
+canvas.addEventListener("mousedown",e=>{
+    dibujando=true;
+    let p=pos(e);
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+    ctx.moveTo(p.x,p.y);
 });
 
-canvas.addEventListener("mousemove", e => {
-    if (!dibujando) return;
-    let p = pos(e);
-    ctx.lineTo(p.x, p.y);
+canvas.addEventListener("mousemove",e=>{
+    if(!dibujando)return;
+    let p=pos(e);
+    ctx.lineTo(p.x,p.y);
     ctx.stroke();
 });
 
-canvas.addEventListener("mouseup", () => dibujando = false);
+canvas.addEventListener("mouseup",()=>dibujando=false);
 
-canvas.addEventListener("touchstart", e => {
-    dibujando = true;
-    let p = pos(e);
+canvas.addEventListener("touchstart",e=>{
+    dibujando=true;
+    let p=pos(e);
     ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
+    ctx.moveTo(p.x,p.y);
 });
 
-canvas.addEventListener("touchmove", e => {
-    if (!dibujando) return;
+canvas.addEventListener("touchmove",e=>{
+    if(!dibujando)return;
     e.preventDefault();
-    let p = pos(e);
-    ctx.lineTo(p.x, p.y);
+    let p=pos(e);
+    ctx.lineTo(p.x,p.y);
     ctx.stroke();
 });
 
-canvas.addEventListener("touchend", () => dibujando = false);
+canvas.addEventListener("touchend",()=>dibujando=false);
 
-function limpiarFirma() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+function limpiarFirma(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 }
 
 // GUARDAR
-function guardarRemito() {
-    let remito = {
+function guardarRemito(){
+    let remito={
         usuario,
-        codigo: codigoCliente.value,
-        nombre: nombreCliente.value,
-        monto: monto.value,
-        fecha: new Date().toLocaleString(),
-        firma: canvas.toDataURL()
+        codigo:codigoCliente.value,
+        nombre:nombreCliente.value,
+        monto:monto.value,
+        fecha:new Date().toLocaleString(),
+        firma:canvas.toDataURL("image/png")
     };
 
-    if (!remito.codigo || !remito.nombre || !remito.monto)
+    if(!remito.codigo||!remito.nombre||!remito.monto)
         return alert("Complete todo");
 
-    let datos = JSON.parse(localStorage.getItem("remitos")) || [];
+    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
     datos.push(remito);
-    localStorage.setItem("remitos", JSON.stringify(datos));
+    localStorage.setItem("remitos",JSON.stringify(datos));
 
     cargarTabla();
 
-    codigoCliente.value = "";
-    nombreCliente.value = "";
-    monto.value = "";
+    codigoCliente.value="";
+    nombreCliente.value="";
+    monto.value="";
     limpiarFirma();
 }
 
 // TABLA
-function cargarTabla() {
-    let datos = JSON.parse(localStorage.getItem("remitos")) || [];
-    let tabla = document.getElementById("tablaRemitos");
-    tabla.innerHTML = "";
+function cargarTabla(){
+    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
+    tablaRemitos.innerHTML="";
 
-    datos.forEach(r => {
-        tabla.innerHTML += `
+    datos.forEach(r=>{
+        tablaRemitos.innerHTML+=`
         <tr>
             <td>${r.usuario}</td>
             <td>${r.nombre}</td>
@@ -199,57 +169,42 @@ function cargarTabla() {
     });
 }
 
-// EXPORTAR
-function exportarExcel() {
-    let datos = JSON.parse(localStorage.getItem("remitos")) || [];
-    if (datos.length === 0) return alert("Sin datos");
+// EXPORTAR CON FIRMA
+function exportarExcel(){
+    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
+    if(datos.length===0) return alert("Sin datos");
 
-    let csv = "Usuario,Codigo,Cliente,Monto,Fecha\n";
+    let csv="Usuario,Codigo,Cliente,Monto,Fecha,Firma(Base64)\n";
 
-    datos.forEach(r => {
-        csv += `${r.usuario},${r.codigo},${r.nombre},${r.monto},${r.fecha}\n`;
+    datos.forEach(r=>{
+        csv+=`${r.usuario},${r.codigo},${r.nombre},${r.monto},${r.fecha},"${r.firma}"\n`;
     });
 
-    let blob = new Blob([csv], { type: "text/csv" });
-    let link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = "remitos.csv";
+    let blob=new Blob([csv],{type:"text/csv"});
+    let link=document.createElement("a");
+    link.href=URL.createObjectURL(blob);
+    link.download="remitos_con_firma.csv";
     link.click();
 }
 
-// MAIL
-function enviarMail() {
-    let datos = JSON.parse(localStorage.getItem("remitos")) || [];
-    if (datos.length === 0) return alert("Sin datos");
-
-    let cuerpo = "Remitos del día:\n\n";
-
-    datos.forEach(r => {
-        cuerpo += `${r.usuario} - ${r.nombre} - $${r.monto} - ${r.fecha}\n`;
-    });
-
-    window.location.href =
-        `mailto:?subject=Remitos del día&body=${encodeURIComponent(cuerpo)}`;
-}
-
 // LIMPIAR
-function limpiarTodo() {
-    if (confirm("¿Cerrar día y borrar registros?")) {
+function limpiarTodo(){
+    if(confirm("Cerrar día?")){
         localStorage.removeItem("remitos");
         cargarTabla();
     }
 }
 
 // AUTOLOGIN
-window.onload = () => {
-    let user = localStorage.getItem("usuario");
-    if (user) {
-        usuario = user;
+window.onload=()=>{
+    let u=localStorage.getItem("usuario");
+    if(u){
+        usuario=u;
         loginDiv.classList.add("hidden");
         appDiv.classList.remove("hidden");
         cargarTabla();
     }
-};
+}
 </script>
 
 </body>
