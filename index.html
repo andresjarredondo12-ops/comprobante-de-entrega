@@ -2,10 +2,9 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>App Remitos con PDF</title>
+<title>App Remitos PDF Final</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- jsPDF -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
@@ -55,7 +54,7 @@ th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
         <tbody id="tablaRemitos"></tbody>
     </table>
 
-    <button onclick="exportarPDFs()">Exportar Remitos en PDF</button>
+    <button onclick="exportarPDF()">Exportar PDF del día</button>
     <button onclick="limpiarTodo()">Cerrar día</button>
 </div>
 
@@ -172,36 +171,52 @@ function cargarTabla(){
     });
 }
 
-// PDF
-function generarPDF(remito){
+// PDF FINAL
+function exportarPDF(){
     const { jsPDF } = window.jspdf;
     let doc = new jsPDF();
 
-    doc.setFontSize(16);
-    doc.text("REMTO DE ENTREGA", 20, 20);
-
-    doc.setFontSize(12);
-    doc.text(`Usuario: ${remito.usuario}`, 20, 40);
-    doc.text(`Codigo Cliente: ${remito.codigo}`, 20, 50);
-    doc.text(`Cliente: ${remito.nombre}`, 20, 60);
-    doc.text(`Monto: $${remito.monto}`, 20, 70);
-    doc.text(`Fecha: ${remito.fecha}`, 20, 80);
-
-    doc.text("Firma:", 20, 100);
-
-    doc.addImage(remito.firma, "PNG", 20, 110, 150, 60);
-
-    doc.save(`remito_${remito.codigo}.pdf`);
-}
-
-// EXPORTAR TODOS
-function exportarPDFs(){
     let datos=JSON.parse(localStorage.getItem("remitos"))||[];
     if(datos.length===0) return alert("Sin datos");
 
-    datos.forEach(r=>{
-        generarPDF(r);
+    let y = 20;
+
+    doc.setFontSize(16);
+    doc.text("REMlTOS DEL DIA", 20, y);
+    y += 10;
+
+    datos.forEach((r, i) => {
+
+        if (y > 250) {
+            doc.addPage();
+            y = 20;
+        }
+
+        doc.setFontSize(11);
+        doc.text(`Cliente: ${r.nombre}`, 20, y);
+        y += 6;
+        doc.text(`Codigo: ${r.codigo}`, 20, y);
+        y += 6;
+        doc.text(`Monto: $${r.monto}`, 20, y);
+        y += 6;
+        doc.text(`Fecha: ${r.fecha}`, 20, y);
+        y += 6;
+        doc.text(`Usuario: ${r.usuario}`, 20, y);
+        y += 6;
+
+        doc.text("Firma:", 20, y);
+        y += 4;
+
+        // Firma grande adaptada
+        doc.addImage(r.firma, "PNG", 20, y, 160, 40);
+        y += 45;
+
+        // Separador
+        doc.line(20, y, 190, y);
+        y += 5;
     });
+
+    doc.save("remitos_del_dia.pdf");
 }
 
 // LIMPIAR
