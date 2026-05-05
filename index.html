@@ -2,8 +2,11 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<title>App Remitos con Firma en Excel</title>
+<title>App Remitos con PDF</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
 body { font-family: Arial; background:#f4f4f4; margin:20px; }
@@ -21,7 +24,7 @@ th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
 
 <div class="container" id="loginDiv">
     <h2>Login</h2>
-    <input type="text" id="username" placeholder="Nombre usuario">
+    <input id="username" placeholder="Nombre usuario">
     <button onclick="login()">Ingresar</button>
 </div>
 
@@ -52,7 +55,7 @@ th, td { border:1px solid #ccc; padding:6px; font-size:12px; }
         <tbody id="tablaRemitos"></tbody>
     </table>
 
-    <button onclick="exportarExcel()">Exportar Excel (con firma)</button>
+    <button onclick="exportarPDFs()">Exportar Remitos en PDF</button>
     <button onclick="limpiarTodo()">Cerrar día</button>
 </div>
 
@@ -169,22 +172,36 @@ function cargarTabla(){
     });
 }
 
-// EXPORTAR CON FIRMA
-function exportarExcel(){
+// PDF
+function generarPDF(remito){
+    const { jsPDF } = window.jspdf;
+    let doc = new jsPDF();
+
+    doc.setFontSize(16);
+    doc.text("REMTO DE ENTREGA", 20, 20);
+
+    doc.setFontSize(12);
+    doc.text(`Usuario: ${remito.usuario}`, 20, 40);
+    doc.text(`Codigo Cliente: ${remito.codigo}`, 20, 50);
+    doc.text(`Cliente: ${remito.nombre}`, 20, 60);
+    doc.text(`Monto: $${remito.monto}`, 20, 70);
+    doc.text(`Fecha: ${remito.fecha}`, 20, 80);
+
+    doc.text("Firma:", 20, 100);
+
+    doc.addImage(remito.firma, "PNG", 20, 110, 150, 60);
+
+    doc.save(`remito_${remito.codigo}.pdf`);
+}
+
+// EXPORTAR TODOS
+function exportarPDFs(){
     let datos=JSON.parse(localStorage.getItem("remitos"))||[];
     if(datos.length===0) return alert("Sin datos");
 
-    let csv="Usuario,Codigo,Cliente,Monto,Fecha,Firma(Base64)\n";
-
     datos.forEach(r=>{
-        csv+=`${r.usuario},${r.codigo},${r.nombre},${r.monto},${r.fecha},"${r.firma}"\n`;
+        generarPDF(r);
     });
-
-    let blob=new Blob([csv],{type:"text/csv"});
-    let link=document.createElement("a");
-    link.href=URL.createObjectURL(blob);
-    link.download="remitos_con_firma.csv";
-    link.click();
 }
 
 // LIMPIAR
