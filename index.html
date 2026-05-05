@@ -31,6 +31,8 @@ button.small { width:auto; padding:5px; font-size:11px; }
 <div class="container hidden" id="appDiv">
     <h2>Nuevo Remito</h2>
 
+    <p><strong>N° Comprobante:</strong> <span id="nroComprobante"></span></p>
+
     <input id="codigoCliente" placeholder="Código Cliente">
     <input id="nombreCliente" placeholder="Nombre y Apellido">
     <input id="monto" type="number" placeholder="Monto">
@@ -47,6 +49,7 @@ button.small { width:auto; padding:5px; font-size:11px; }
     <table>
         <thead>
             <tr>
+                <th>N°</th>
                 <th>Cliente</th>
                 <th>Monto</th>
                 <th>Fecha</th>
@@ -63,6 +66,20 @@ button.small { width:auto; padding:5px; font-size:11px; }
 <script>
 let usuario="";
 
+// ====== NUMERO DE COMPROBANTE ======
+function obtenerSiguienteNumero(){
+    let n = parseInt(localStorage.getItem("contadorComprobantes")) || 0;
+    n++;
+    localStorage.setItem("contadorComprobantes", n);
+    return n.toString().padStart(2,"0");
+}
+
+function mostrarProximoNumero(){
+    let n = parseInt(localStorage.getItem("contadorComprobantes")) || 0;
+    n++;
+    nroComprobante.innerText = n.toString().padStart(2,"0");
+}
+
 // LOGIN
 function login(){
     usuario=username.value;
@@ -72,6 +89,7 @@ function login(){
     loginDiv.classList.add("hidden");
     appDiv.classList.remove("hidden");
 
+    mostrarProximoNumero();
     cargarTabla();
 }
 
@@ -133,7 +151,11 @@ function limpiarFirma(){
 
 // GUARDAR
 function guardarRemito(){
+
+    let numero = obtenerSiguienteNumero();
+
     let remito={
+        numero,
         usuario,
         codigo:codigoCliente.value,
         nombre:nombreCliente.value,
@@ -150,6 +172,7 @@ function guardarRemito(){
     localStorage.setItem("remitos",JSON.stringify(datos));
 
     cargarTabla();
+    mostrarProximoNumero();
 
     codigoCliente.value="";
     nombreCliente.value="";
@@ -165,6 +188,7 @@ function cargarTabla(){
     datos.forEach((r,i)=>{
         tablaRemitos.innerHTML+=`
         <tr>
+            <td>${r.numero}</td>
             <td>${r.nombre}</td>
             <td>$${r.monto}</td>
             <td>${r.fecha}</td>
@@ -195,19 +219,20 @@ function generarPDFIndividual(r){
     let doc=new jsPDF();
 
     doc.setFontSize(16);
-    doc.text("REMlTO DE ENTREGA",20,20);
+    doc.text("REMITO DE ENTREGA",20,20);
 
     doc.setFontSize(12);
-    doc.text(`Cliente: ${r.nombre}`,20,40);
-    doc.text(`Codigo: ${r.codigo}`,20,50);
-    doc.text(`Monto: $${r.monto}`,20,60);
-    doc.text(`Fecha: ${r.fecha}`,20,70);
-    doc.text(`Usuario: ${r.usuario}`,20,80);
+    doc.text(`N°: ${r.numero}`,20,35);
+    doc.text(`Cliente: ${r.nombre}`,20,45);
+    doc.text(`Codigo: ${r.codigo}`,20,55);
+    doc.text(`Monto: $${r.monto}`,20,65);
+    doc.text(`Fecha: ${r.fecha}`,20,75);
+    doc.text(`Usuario: ${r.usuario}`,20,85);
 
-    doc.text("Firma:",20,95);
-    doc.addImage(r.firma,"PNG",20,100,160,50);
+    doc.text("Firma:",20,100);
+    doc.addImage(r.firma,"PNG",20,105,160,50);
 
-    doc.save(`remito_${r.codigo}.pdf`);
+    doc.save(`remito_${r.numero}.pdf`);
 }
 
 // PDF TODOS
@@ -220,7 +245,7 @@ function exportarTodos(){
 
     let y=20;
 
-    doc.text("REMlTOS DEL DIA",20,y);
+    doc.text("REMITOS DEL DIA",20,y);
     y+=10;
 
     datos.forEach(r=>{
@@ -229,6 +254,7 @@ function exportarTodos(){
             y=20;
         }
 
+        doc.text(`N°: ${r.numero}`,20,y); y+=6;
         doc.text(`Cliente: ${r.nombre}`,20,y); y+=6;
         doc.text(`Codigo: ${r.codigo}`,20,y); y+=6;
         doc.text(`Monto: $${r.monto}`,20,y); y+=6;
@@ -250,7 +276,9 @@ function exportarTodos(){
 function limpiarTodo(){
     if(confirm("Cerrar día?")){
         localStorage.removeItem("remitos");
+        localStorage.removeItem("contadorComprobantes");
         cargarTabla();
+        mostrarProximoNumero();
     }
 }
 
@@ -261,6 +289,7 @@ window.onload=()=>{
         usuario=u;
         loginDiv.classList.add("hidden");
         appDiv.classList.remove("hidden");
+        mostrarProximoNumero();
         cargarTabla();
     }
 }
