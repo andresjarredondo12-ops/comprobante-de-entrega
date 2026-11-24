@@ -8,48 +8,79 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
-body { font-family: Arial; background:#f4f4f4; margin:20px; }
-.container { max-width:700px; margin:auto; background:white; padding:20px; border-radius:10px; }
-input, button { width:100%; padding:10px; margin-top:10px; }
-canvas { border:1px solid black; width:100%; height:200px; touch-action:none; }
-.hidden { display:none; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 20px; color: #333; }
+  .container { max-width: 720px; margin: auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  h2, h3 { margin-top: 0; }
+  input, select, button { width: 100%; padding: 10px; margin-top: 10px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px; }
+  button { background: #007bff; color: white; border: none; cursor: pointer; font-weight: bold; }
+  button:hover { background: #0056b3; }
+  button.secondary { background: #6c757d; }
+  button.secondary:hover { background: #545b62; }
+  button.danger { background: #dc3545; }
+  button.danger:hover { background: #b02a37; }
+  button.admin-btn { background: #28a745; }
+  button.admin-btn:hover { background: #1e7e34; }
+  button.small { width: auto; padding: 5px 10px; font-size: 12px; margin-top: 0; }
 
-table { width:100%; margin-top:20px; border-collapse:collapse; }
-th, td { border:1px solid #ccc; padding:6px; font-size:12px; text-align:center; }
-button.small { width:auto; padding:5px; font-size:11px; }
+  canvas { border: 1px solid #333; width: 100%; height: 200px; touch-action: none; display: block; margin-top: 10px; background: #fff; border-radius: 4px; }
+  .hidden { display: none; }
+
+  .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee; flex-wrap: wrap; }
+  .top-bar-actions { display: flex; gap: 8px; }
+  .top-bar-actions button { width: auto; margin-top: 0; padding: 8px 12px; font-size: 13px; }
+
+  table { width: 100%; margin-top: 15px; border-collapse: collapse; }
+  th, td { border: 1px solid #ccc; padding: 8px 6px; font-size: 13px; text-align: center; }
+  th { background: #f8f9fa; }
+  .hint { font-size: 12px; color: #666; margin-top: 8px; }
 </style>
 </head>
 
 <body>
 
+<!-- ================= LOGIN ================= -->
 <div class="container" id="loginDiv">
-    <h2>Login</h2>
-    <input id="username" placeholder="Nombre usuario">
+    <h2>Iniciar Sesión</h2>
+    <input id="loginUser" type="text" placeholder="Nombre de usuario" autocomplete="username">
+    <input id="loginPass" type="password" placeholder="Contraseña" autocomplete="current-password">
     <button onclick="login()">Ingresar</button>
+    <p class="hint">Acceso inicial administrador: <strong>admin</strong> / <strong>admin123</strong></p>
 </div>
 
+<!-- ================= APP REMITOS ================= -->
 <div class="container hidden" id="appDiv">
+    <div class="top-bar">
+        <div>
+            <strong>Usuario:</strong> <span id="usuarioActivoLabel"></span>
+        </div>
+        <div class="top-bar-actions">
+            <button id="btnIrAdmin" class="admin-btn hidden" onclick="mostrarPanelAdmin()">Panel Admin</button>
+            <button class="secondary" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </div>
+
     <h2>Nuevo Remito</h2>
 
-    <p><strong>N° Comprobante:</strong> <span id="nroComprobante"></span></p>
-
-    <input id="codigoCliente" placeholder="Código Cliente">
-    <input id="nombreCliente" placeholder="Nombre y Apellido">
-    <input id="monto" type="number" placeholder="Monto">
+    <input id="nroRemito" type="text" placeholder="Número de Remito (Ej: 0001-00001234)">
+    <input id="codigoCliente" type="text" placeholder="Código Cliente">
+    <input id="nombreCliente" type="text" placeholder="Nombre y Apellido">
+    <input id="monto" type="number" step="0.01" placeholder="Monto">
 
     <p><strong>Fecha:</strong> <span id="fechaHora"></span></p>
 
+    <label><strong>Firma del cliente:</strong></label>
     <canvas id="firmaCanvas"></canvas>
-    <button onclick="limpiarFirma()">Limpiar Firma</button>
+    <button class="secondary" onclick="limpiarFirma()">Limpiar Firma</button>
 
     <button onclick="guardarRemito()">Guardar Remito</button>
-    <button onclick="exportarUltimo()">Exportar último remito</button>
+    <button class="secondary" onclick="exportarUltimo()">Exportar último remito</button>
 
-    <h3>Registros</h3>
+    <h3 style="margin-top:25px;">Registros del día</h3>
     <table>
         <thead>
             <tr>
-                <th>N°</th>
+                <th>N° Remito</th>
                 <th>Cliente</th>
                 <th>Monto</th>
                 <th>Fecha</th>
@@ -60,239 +91,445 @@ button.small { width:auto; padding:5px; font-size:11px; }
     </table>
 
     <button onclick="exportarTodos()">Exportar todos (PDF)</button>
-    <button onclick="limpiarTodo()">Cerrar día</button>
+    <button class="danger" onclick="limpiarTodo()">Cerrar día</button>
+</div>
+
+<!-- ================= PANEL ADMINISTRADOR ================= -->
+<div class="container hidden" id="adminDiv">
+    <div class="top-bar">
+        <h2>Panel Administrador General</h2>
+        <div class="top-bar-actions">
+            <button class="secondary" onclick="volverARemitos()">Ir a Remitos</button>
+            <button class="danger" onclick="logout()">Cerrar Sesión</button>
+        </div>
+    </div>
+
+    <h3>Cargar Nuevo Usuario</h3>
+    <input id="nuevoUsuario" type="text" placeholder="Nombre de usuario">
+    <input id="nuevaPassword" type="password" placeholder="Contraseña">
+    <select id="nuevoRol">
+        <option value="operador">Operador (Solo Remitos)</option>
+        <option value="admin">Administrador General</option>
+    </select>
+    <button class="admin-btn" onclick="crearUsuario()">Guardar Usuario</button>
+
+    <h3 style="margin-top:25px;">Usuarios Registrados</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Usuario</th>
+                <th>Rol</th>
+                <th>Acción</th>
+            </tr>
+        </thead>
+        <tbody id="tablaUsuarios"></tbody>
+    </table>
 </div>
 
 <script>
-let usuario="";
+// ================= REFERENCIAS DOM =================
+const loginDiv = document.getElementById("loginDiv");
+const appDiv = document.getElementById("appDiv");
+const adminDiv = document.getElementById("adminDiv");
 
-// ====== NUMERO DE COMPROBANTE ======
-function obtenerSiguienteNumero(){
-    let n = parseInt(localStorage.getItem("contadorComprobantes")) || 0;
-    n++;
-    localStorage.setItem("contadorComprobantes", n);
-    return n.toString().padStart(2,"0");
+const loginUserInput = document.getElementById("loginUser");
+const loginPassInput = document.getElementById("loginPass");
+const usuarioActivoLabel = document.getElementById("usuarioActivoLabel");
+const btnIrAdmin = document.getElementById("btnIrAdmin");
+
+const nroRemitoInput = document.getElementById("nroRemito");
+const codigoClienteInput = document.getElementById("codigoCliente");
+const nombreClienteInput = document.getElementById("nombreCliente");
+const montoInput = document.getElementById("monto");
+const fechaHoraSpan = document.getElementById("fechaHora");
+const tablaRemitos = document.getElementById("tablaRemitos");
+
+const nuevoUsuarioInput = document.getElementById("nuevoUsuario");
+const nuevaPasswordInput = document.getElementById("nuevaPassword");
+const nuevoRolSelect = document.getElementById("nuevoRol");
+const tablaUsuarios = document.getElementById("tablaUsuarios");
+
+const canvas = document.getElementById("firmaCanvas");
+const ctx = canvas.getContext("2d");
+
+let sesionActual = null;
+let dibujando = false;
+
+// ================= GESTIÓN DE USUARIOS =================
+function obtenerUsuarios() {
+    let usuarios = JSON.parse(localStorage.getItem("usuariosApp"));
+    if (!usuarios || usuarios.length === 0) {
+        // Usuario administrador por defecto
+        usuarios = [{ user: "admin", pass: "admin123", rol: "admin" }];
+        localStorage.setItem("usuariosApp", JSON.stringify(usuarios));
+    }
+    return usuarios;
 }
 
-function mostrarProximoNumero(){
-    let n = parseInt(localStorage.getItem("contadorComprobantes")) || 0;
-    n++;
-    nroComprobante.innerText = n.toString().padStart(2,"0");
+function guardarUsuarios(usuarios) {
+    localStorage.setItem("usuariosApp", JSON.stringify(usuarios));
 }
 
-// LOGIN
-function login(){
-    usuario=username.value;
-    if(!usuario) return alert("Ingrese usuario");
-    localStorage.setItem("usuario",usuario);
+function crearUsuario() {
+    const user = nuevoUsuarioInput.value.trim();
+    const pass = nuevaPasswordInput.value.trim();
+    const rol = nuevoRolSelect.value;
 
-    loginDiv.classList.add("hidden");
-    appDiv.classList.remove("hidden");
+    if (!user || !pass) {
+        return alert("Complete usuario y contraseña.");
+    }
 
-    mostrarProximoNumero();
-    cargarTabla();
+    const usuarios = obtenerUsuarios();
+    const existe = usuarios.some(u => u.user.toLowerCase() === user.toLowerCase());
+    if (existe) {
+        return alert("Ese nombre de usuario ya existe.");
+    }
+
+    usuarios.push({ user, pass, rol });
+    guardarUsuarios(usuarios);
+
+    nuevoUsuarioInput.value = "";
+    nuevaPasswordInput.value = "";
+    nuevoRolSelect.value = "operador";
+
+    cargarTablaUsuarios();
+    alert(`Usuario "${user}" creado correctamente.`);
 }
 
-// FECHA
-function actualizarFechaHora(){
-    fechaHora.innerText=new Date().toLocaleString();
-}
-setInterval(actualizarFechaHora,1000);
+function eliminarUsuario(index) {
+    const usuarios = obtenerUsuarios();
+    const objetivo = usuarios[index];
 
-// FIRMA
-const canvas=document.getElementById("firmaCanvas");
-const ctx=canvas.getContext("2d");
-let dibujando=false;
+    if (objetivo.user === sesionActual.user) {
+        return alert("No puedes eliminar tu propio usuario mientras estás conectado.");
+    }
 
-function pos(e){
-    const r=canvas.getBoundingClientRect();
-    return {
-        x:(e.touches?e.touches[0].clientX:e.clientX)-r.left,
-        y:(e.touches?e.touches[0].clientY:e.clientY)-r.top
-    };
+    if (confirm(`¿Seguro que deseas eliminar al usuario "${objetivo.user}"?`)) {
+        usuarios.splice(index, 1);
+        guardarUsuarios(usuarios);
+        cargarTablaUsuarios();
+    }
 }
 
-canvas.addEventListener("mousedown",e=>{
-    dibujando=true;
-    let p=pos(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x,p.y);
-});
+function cargarTablaUsuarios() {
+    const usuarios = obtenerUsuarios();
+    tablaUsuarios.innerHTML = "";
 
-canvas.addEventListener("mousemove",e=>{
-    if(!dibujando)return;
-    let p=pos(e);
-    ctx.lineTo(p.x,p.y);
-    ctx.stroke();
-});
+    usuarios.forEach((u, i) => {
+        const tr = document.createElement("tr");
 
-canvas.addEventListener("mouseup",()=>dibujando=false);
+        const tdUser = document.createElement("td");
+        tdUser.textContent = u.user;
 
-canvas.addEventListener("touchstart",e=>{
-    dibujando=true;
-    let p=pos(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x,p.y);
-});
+        const tdRol = document.createElement("td");
+        tdRol.textContent = u.rol === "admin" ? "Administrador" : "Operador";
 
-canvas.addEventListener("touchmove",e=>{
-    if(!dibujando)return;
-    e.preventDefault();
-    let p=pos(e);
-    ctx.lineTo(p.x,p.y);
-    ctx.stroke();
-});
+        const tdAccion = document.createElement("td");
+        if (u.user !== sesionActual.user) {
+            const btnDel = document.createElement("button");
+            btnDel.className = "small danger";
+            btnDel.textContent = "Eliminar";
+            btnDel.onclick = () => eliminarUsuario(i);
+            tdAccion.appendChild(btnDel);
+        } else {
+            tdAccion.textContent = "Sesión actual";
+        }
 
-canvas.addEventListener("touchend",()=>dibujando=false);
-
-function limpiarFirma(){
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-}
-
-// GUARDAR
-function guardarRemito(){
-
-    let numero = obtenerSiguienteNumero();
-
-    let remito={
-        numero,
-        usuario,
-        codigo:codigoCliente.value,
-        nombre:nombreCliente.value,
-        monto:monto.value,
-        fecha:new Date().toLocaleString(),
-        firma:canvas.toDataURL("image/png")
-    };
-
-    if(!remito.codigo||!remito.nombre||!remito.monto)
-        return alert("Complete todo");
-
-    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
-    datos.push(remito);
-    localStorage.setItem("remitos",JSON.stringify(datos));
-
-    cargarTabla();
-    mostrarProximoNumero();
-
-    codigoCliente.value="";
-    nombreCliente.value="";
-    monto.value="";
-    limpiarFirma();
-}
-
-// TABLA
-function cargarTabla(){
-    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
-    tablaRemitos.innerHTML="";
-
-    datos.forEach((r,i)=>{
-        tablaRemitos.innerHTML+=`
-        <tr>
-            <td>${r.numero}</td>
-            <td>${r.nombre}</td>
-            <td>$${r.monto}</td>
-            <td>${r.fecha}</td>
-            <td>
-                <button class="small" onclick="exportarIndividual(${i})">PDF</button>
-            </td>
-        </tr>`;
+        tr.append(tdUser, tdRol, tdAccion);
+        tablaUsuarios.appendChild(tr);
     });
 }
 
-// PDF INDIVIDUAL
-function exportarIndividual(index){
-    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
-    let r=datos[index];
-    generarPDFIndividual(r);
+// ================= LOGIN / LOGOUT / NAVEGACIÓN =================
+function login() {
+    const user = loginUserInput.value.trim();
+    const pass = loginPassInput.value.trim();
+
+    if (!user || !pass) {
+        return alert("Ingrese usuario y contraseña.");
+    }
+
+    const usuarios = obtenerUsuarios();
+    const encontrado = usuarios.find(u => u.user === user && u.pass === pass);
+
+    if (!encontrado) {
+        return alert("Usuario o contraseña incorrectos.");
+    }
+
+    sesionActual = { user: encontrado.user, rol: encontrado.rol };
+    localStorage.setItem("sesionActual", JSON.stringify(sesionActual));
+
+    loginUserInput.value = "";
+    loginPassInput.value = "";
+
+    iniciarVistaApp();
 }
 
-// PDF ULTIMO
-function exportarUltimo(){
-    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
-    if(datos.length===0) return alert("Sin datos");
-    generarPDFIndividual(datos[datos.length-1]);
+function logout() {
+    sesionActual = null;
+    localStorage.removeItem("sesionActual");
+    appDiv.classList.add("hidden");
+    adminDiv.classList.add("hidden");
+    loginDiv.classList.remove("hidden");
 }
 
-// GENERADOR INDIVIDUAL
-function generarPDFIndividual(r){
+function iniciarVistaApp() {
+    loginDiv.classList.add("hidden");
+    adminDiv.classList.add("hidden");
+    appDiv.classList.remove("hidden");
+
+    usuarioActivoLabel.textContent = `${sesionActual.user} (${sesionActual.rol})`;
+
+    if (sesionActual.rol === "admin") {
+        btnIrAdmin.classList.remove("hidden");
+    } else {
+        btnIrAdmin.classList.add("hidden");
+    }
+
+    ajustarCanvas();
+    cargarTabla();
+}
+
+function mostrarPanelAdmin() {
+    if (!sesionActual || sesionActual.rol !== "admin") return;
+    appDiv.classList.add("hidden");
+    adminDiv.classList.remove("hidden");
+    cargarTablaUsuarios();
+}
+
+function volverARemitos() {
+    adminDiv.classList.add("hidden");
+    appDiv.classList.remove("hidden");
+    ajustarCanvas();
+    cargarTabla();
+}
+
+// ================= FECHA Y HORA =================
+function actualizarFechaHora() {
+    fechaHoraSpan.textContent = new Date().toLocaleString();
+}
+actualizarFechaHora();
+setInterval(actualizarFechaHora, 1000);
+
+// ================= FIRMA (CANVAS CORREGIDO) =================
+function ajustarCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#000";
+}
+
+window.addEventListener("resize", () => {
+    if (!appDiv.classList.contains("hidden")) {
+        ajustarCanvas();
+    }
+});
+
+function pos(e) {
+    const r = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+        x: clientX - r.left,
+        y: clientY - r.top
+    };
+}
+
+function iniciarTrazo(e) {
+    dibujando = true;
+    const p = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+}
+
+function moverTrazo(e) {
+    if (!dibujando) return;
+    if (e.touches) e.preventDefault();
+    const p = pos(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+}
+
+function terminarTrazo() {
+    dibujando = false;
+}
+
+canvas.addEventListener("mousedown", iniciarTrazo);
+canvas.addEventListener("mousemove", moverTrazo);
+window.addEventListener("mouseup", terminarTrazo);
+
+canvas.addEventListener("touchstart", iniciarTrazo, { passive: false });
+canvas.addEventListener("touchmove", moverTrazo, { passive: false });
+canvas.addEventListener("touchend", terminarTrazo);
+
+function limpiarFirma() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// ================= REMITOS =================
+function guardarRemito() {
+    const numero = nroRemitoInput.value.trim();
+    const codigo = codigoClienteInput.value.trim();
+    const nombre = nombreClienteInput.value.trim();
+    const monto = montoInput.value.trim();
+
+    if (!numero || !codigo || !nombre || !monto) {
+        return alert("Por favor, complete el número de remito y todos los datos del cliente.");
+    }
+
+    const datos = JSON.parse(localStorage.getItem("remitos")) || [];
+
+    // Validar si el número de remito ya fue cargado hoy
+    if (datos.some(r => r.numero === numero)) {
+        if (!confirm(`El remito N° "${numero}" ya existe. ¿Desea guardarlo igualmente?`)) {
+            return;
+        }
+    }
+
+    const remito = {
+        numero,
+        usuario: sesionActual.user,
+        codigo,
+        nombre,
+        monto,
+        fecha: new Date().toLocaleString(),
+        firma: canvas.toDataURL("image/png")
+    };
+
+    datos.push(remito);
+    localStorage.setItem("remitos", JSON.stringify(datos));
+
+    cargarTabla();
+
+    nroRemitoInput.value = "";
+    codigoClienteInput.value = "";
+    nombreClienteInput.value = "";
+    montoInput.value = "";
+    limpiarFirma();
+}
+
+function cargarTabla() {
+    const datos = JSON.parse(localStorage.getItem("remitos")) || [];
+    tablaRemitos.innerHTML = "";
+
+    datos.forEach((r, i) => {
+        const tr = document.createElement("tr");
+
+        const tdNum = document.createElement("td");
+        tdNum.textContent = r.numero;
+
+        const tdNom = document.createElement("td");
+        tdNom.textContent = r.nombre;
+
+        const tdMon = document.createElement("td");
+        tdMon.textContent = `$${r.monto}`;
+
+        const tdFec = document.createElement("td");
+        tdFec.textContent = r.fecha;
+
+        const tdAcc = document.createElement("td");
+        const btnPdf = document.createElement("button");
+        btnPdf.className = "small";
+        btnPdf.textContent = "PDF";
+        btnPdf.onclick = () => exportarIndividual(i);
+        tdAcc.appendChild(btnPdf);
+
+        tr.append(tdNum, tdNom, tdMon, tdFec, tdAcc);
+        tablaRemitos.appendChild(tr);
+    });
+}
+
+// ================= EXPORTACIÓN PDF =================
+function exportarIndividual(index) {
+    const datos = JSON.parse(localStorage.getItem("remitos")) || [];
+    if (!datos[index]) return;
+    generarPDFIndividual(datos[index]);
+}
+
+function exportarUltimo() {
+    const datos = JSON.parse(localStorage.getItem("remitos")) || [];
+    if (datos.length === 0) return alert("Sin datos para exportar.");
+    generarPDFIndividual(datos[datos.length - 1]);
+}
+
+function generarPDFIndividual(r) {
     const { jsPDF } = window.jspdf;
-    let doc=new jsPDF();
+    const doc = new jsPDF();
 
     doc.setFontSize(16);
-    doc.text("REMITO DE ENTREGA",20,20);
+    doc.text("REMITO DE ENTREGA", 20, 20);
 
     doc.setFontSize(12);
-    doc.text(`N°: ${r.numero}`,20,35);
-    doc.text(`Cliente: ${r.nombre}`,20,45);
-    doc.text(`Codigo: ${r.codigo}`,20,55);
-    doc.text(`Monto: $${r.monto}`,20,65);
-    doc.text(`Fecha: ${r.fecha}`,20,75);
-    doc.text(`Usuario: ${r.usuario}`,20,85);
+    doc.text(`N° Remito: ${r.numero}`, 20, 35);
+    doc.text(`Cliente: ${r.nombre}`, 20, 45);
+    doc.text(`Código: ${r.codigo}`, 20, 55);
+    doc.text(`Monto: $${r.monto}`, 20, 65);
+    doc.text(`Fecha: ${r.fecha}`, 20, 75);
+    doc.text(`Usuario: ${r.usuario}`, 20, 85);
 
-    doc.text("Firma:",20,100);
-    doc.addImage(r.firma,"PNG",20,105,160,50);
+    doc.text("Firma:", 20, 100);
+    doc.addImage(r.firma, "PNG", 20, 105, 160, 50);
 
     doc.save(`remito_${r.numero}.pdf`);
 }
 
-// PDF TODOS
-function exportarTodos(){
+function exportarTodos() {
     const { jsPDF } = window.jspdf;
-    let doc=new jsPDF();
+    const doc = new jsPDF();
 
-    let datos=JSON.parse(localStorage.getItem("remitos"))||[];
-    if(datos.length===0) return alert("Sin datos");
+    const datos = JSON.parse(localStorage.getItem("remitos")) || [];
+    if (datos.length === 0) return alert("Sin datos para exportar.");
 
-    let y=20;
+    let y = 20;
+    doc.setFontSize(16);
+    doc.text("REMITOS DEL DÍA", 20, y);
+    y += 12;
+    doc.setFontSize(12);
 
-    doc.text("REMITOS DEL DIA",20,y);
-    y+=10;
-
-    datos.forEach(r=>{
-        if(y>250){
+    datos.forEach(r => {
+        if (y > 230) {
             doc.addPage();
-            y=20;
+            y = 20;
         }
 
-        doc.text(`N°: ${r.numero}`,20,y); y+=6;
-        doc.text(`Cliente: ${r.nombre}`,20,y); y+=6;
-        doc.text(`Codigo: ${r.codigo}`,20,y); y+=6;
-        doc.text(`Monto: $${r.monto}`,20,y); y+=6;
-        doc.text(`Fecha: ${r.fecha}`,20,y); y+=6;
-        doc.text(`Usuario: ${r.usuario}`,20,y); y+=6;
+        doc.text(`N° Remito: ${r.numero}`, 20, y); y += 6;
+        doc.text(`Cliente: ${r.nombre}`, 20, y); y += 6;
+        doc.text(`Código: ${r.codigo}`, 20, y); y += 6;
+        doc.text(`Monto: $${r.monto}`, 20, y); y += 6;
+        doc.text(`Fecha: ${r.fecha}`, 20, y); y += 6;
+        doc.text(`Usuario: ${r.usuario}`, 20, y); y += 6;
 
-        doc.text("Firma:",20,y); y+=4;
-        doc.addImage(r.firma,"PNG",20,y,160,40);
-        y+=45;
+        doc.text("Firma:", 20, y); y += 4;
+        doc.addImage(r.firma, "PNG", 20, y, 160, 40);
+        y += 45;
 
-        doc.line(20,y,190,y);
-        y+=5;
+        doc.line(20, y, 190, y);
+        y += 8;
     });
 
     doc.save("remitos_del_dia.pdf");
 }
 
-// LIMPIAR
-function limpiarTodo(){
-    if(confirm("Cerrar día?")){
+// ================= CERRAR DÍA =================
+function limpiarTodo() {
+    if (confirm("¿Cerrar día? Se borrarán los remitos guardados (los usuarios se mantendrán).")) {
         localStorage.removeItem("remitos");
-        localStorage.removeItem("contadorComprobantes");
         cargarTabla();
-        mostrarProximoNumero();
     }
 }
 
-// AUTOLOGIN
-window.onload=()=>{
-    let u=localStorage.getItem("usuario");
-    if(u){
-        usuario=u;
-        loginDiv.classList.add("hidden");
-        appDiv.classList.remove("hidden");
-        mostrarProximoNumero();
-        cargarTabla();
+// ================= AUTOLOGIN =================
+window.onload = () => {
+    obtenerUsuarios(); // Asegura que exista el admin por defecto
+    const guardada = JSON.parse(localStorage.getItem("sesionActual"));
+    if (guardada) {
+        sesionActual = guardada;
+        iniciarVistaApp();
     }
-}
+};
 </script>
 
 </body>
