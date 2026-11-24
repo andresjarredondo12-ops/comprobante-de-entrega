@@ -45,7 +45,7 @@
     <input id="loginUser" type="text" placeholder="Nombre de usuario" autocomplete="username">
     <input id="loginPass" type="password" placeholder="Contraseña" autocomplete="current-password">
     <button onclick="login()">Ingresar</button>
-    <p class="hint">Acceso inicial administrador: <strong>admin</strong> / <strong>admin123</strong></p>
+    <p class="hint">Acceso inicial administrador: <strong>amedesarrollos</strong> / <strong>1234</strong></p>
 </div>
 
 <!-- ================= APP REMITOS ================= -->
@@ -156,7 +156,7 @@ let dibujando = false;
 function obtenerUsuarios() {
     let usuarios = JSON.parse(localStorage.getItem("usuariosApp"));
     if (!usuarios || usuarios.length === 0) {
-        usuarios = [{ user: "admin", pass: "admin123", rol: "admin" }];
+        usuarios = [{ user: "amedesarrollos", pass: "1234", rol: "admin" }];
         localStorage.setItem("usuariosApp", JSON.stringify(usuarios));
     }
     return usuarios;
